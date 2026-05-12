@@ -40,14 +40,20 @@ let draft = ''
 let statusMessage = ''
 let revealingRowIndex: number | null = null
 let revealTimeout: ReturnType<typeof setTimeout> | null = null
+let revealToken = 0
 
-const VALID_WORDS = new Set(
-  [...englishWordsRaw.split('\n'), ...dutchWordsRaw.split('\n')]
-    .map((word) => word.trim().toUpperCase())
-    .filter((word) => /^[A-Z]{5}$/.test(word)),
-)
+let validWords: Set<string> | null = null
 
-VALID_WORDS.add(ANSWER)
+function getValidWords(): Set<string> {
+  if (validWords) return validWords
+  validWords = new Set(
+    [...englishWordsRaw.split('\n'), ...dutchWordsRaw.split('\n')]
+      .map((word) => word.trim().toUpperCase())
+      .filter((word) => /^[A-Z]{5}$/.test(word)),
+  )
+  validWords.add(ANSWER)
+  return validWords
+}
 
 function getAmsterdamDayKey(date = new Date()): string {
   return new Intl.DateTimeFormat('en-CA', {
@@ -210,7 +216,7 @@ function submitGuess() {
   }
 
   const guess = draft
-  if (!VALID_WORDS.has(guess)) {
+  if (!getValidWords().has(guess)) {
     statusMessage = INVALID_WORD_MESSAGE
     return
   }
@@ -222,7 +228,9 @@ function submitGuess() {
   saveState()
 
   if (revealTimeout) clearTimeout(revealTimeout)
+  const token = ++revealToken
   revealTimeout = setTimeout(() => {
+    if (token !== revealToken) return
     revealingRowIndex = null
     revealTimeout = null
 
@@ -258,12 +266,13 @@ function handleKey(input: string) {
 }
 
 function resetForNewDay(nextDay: string) {
+  revealingRowIndex = null
+  revealToken += 1
   if (revealTimeout) {
     clearTimeout(revealTimeout)
     revealTimeout = null
   }
 
-  revealingRowIndex = null
   statusMessage = ''
   state.dayKey = nextDay
   state.guesses = []
