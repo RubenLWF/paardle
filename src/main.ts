@@ -53,6 +53,7 @@ let revealTimeout: ReturnType<typeof setTimeout> | null = null
 let revealToken = 0
 let isStatsOpen = false
 let statsSnapshot: ScoreStatistics | null = null
+let shouldRestoreStatsButtonFocus = false
 
 let validWords: Set<string> | null = null
 
@@ -426,9 +427,17 @@ function render() {
     element.addEventListener('click', () => {
       statsSnapshot = null
       isStatsOpen = false
+      shouldRestoreStatsButtonFocus = true
       render()
     })
   })
+
+  if (isStatsOpen) {
+    app.querySelector<HTMLButtonElement>('.stats-close')?.focus()
+  } else if (shouldRestoreStatsButtonFocus) {
+    app.querySelector<HTMLButtonElement>('button[data-action="open-stats"]')?.focus()
+    shouldRestoreStatsButtonFocus = false
+  }
 }
 
 window.addEventListener('keydown', (event) => {
@@ -436,6 +445,7 @@ window.addEventListener('keydown', (event) => {
     event.preventDefault()
     statsSnapshot = null
     isStatsOpen = false
+    shouldRestoreStatsButtonFocus = true
     render()
     return
   }
