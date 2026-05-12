@@ -27,6 +27,16 @@ interface GameState {
   scores: ScoreEntry[]
 }
 
+interface ScoreStatistics {
+  played: number
+  wins: number
+  losses: number
+  winRate: number
+  averageWinGuesses: string
+  bestWinGuesses: number | null
+  distribution: number[]
+}
+
 const appElement = document.querySelector<HTMLDivElement>('#app')
 
 if (!appElement) {
@@ -42,6 +52,7 @@ let revealingRowIndex: number | null = null
 let revealTimeout: ReturnType<typeof setTimeout> | null = null
 let revealToken = 0
 let isStatsOpen = false
+let statsSnapshot: ScoreStatistics | null = null
 
 let validWords: Set<string> | null = null
 
@@ -198,7 +209,7 @@ function recordDailyScore() {
   state.scoreRecorded = true
 }
 
-function getScoreStatistics(scores: ScoreEntry[]) {
+function getScoreStatistics(scores: ScoreEntry[]): ScoreStatistics {
   const played = scores.length
   const wins = scores.filter((score) => score.won).length
   const losses = played - wins
@@ -305,7 +316,7 @@ function resetForNewDay(nextDay: string) {
 }
 
 function render() {
-  const stats = isStatsOpen ? getScoreStatistics(state.scores) : null
+  const stats = isStatsOpen ? (statsSnapshot ?? getScoreStatistics(state.scores)) : null
   const keyboardStatuses = getKeyboardStatuses()
   const scoreItems = [...state.scores]
     .reverse()
@@ -318,7 +329,7 @@ function render() {
   app.innerHTML = `
     <header class="top-bar">
       <h1>PAARDLE</h1>
-      <button type="button" class="stats-button" data-action="open-stats" aria-haspopup="dialog" aria-expanded="${isStatsOpen}">Statistieken</button>
+      <button type="button" class="stats-button" data-action="open-stats" aria-haspopup="dialog" aria-expanded="${isStatsOpen ? 'true' : 'false'}">Statistieken</button>
     </header>
     <main class="game-shell">
       <section class="board" aria-label="Word grid">
@@ -406,6 +417,7 @@ function render() {
 
   app.querySelectorAll<HTMLButtonElement>('button[data-action="open-stats"]').forEach((button) => {
     button.addEventListener('click', () => {
+      statsSnapshot = getScoreStatistics(state.scores)
       isStatsOpen = true
       render()
     })
@@ -413,6 +425,7 @@ function render() {
 
   app.querySelectorAll<HTMLElement>('[data-action="close-stats"]').forEach((element) => {
     element.addEventListener('click', () => {
+      statsSnapshot = null
       isStatsOpen = false
       render()
     })
@@ -423,6 +436,7 @@ window.addEventListener('keydown', (event) => {
   const key = event.key.toUpperCase()
   if (key === 'ESCAPE' && isStatsOpen) {
     event.preventDefault()
+    statsSnapshot = null
     isStatsOpen = false
     render()
     return
