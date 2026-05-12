@@ -433,14 +433,15 @@ function render() {
 }
 
 window.addEventListener('keydown', (event) => {
-  const key = event.key.toUpperCase()
-  if (key === 'ESCAPE' && isStatsOpen) {
+  if (event.key === 'Escape' && isStatsOpen) {
     event.preventDefault()
     statsSnapshot = null
     isStatsOpen = false
     render()
     return
   }
+
+  const key = event.key.toUpperCase()
   if (key === 'ENTER' || key === 'BACKSPACE' || /^[A-Z]$/.test(key)) {
     event.preventDefault()
     handleKey(key)
