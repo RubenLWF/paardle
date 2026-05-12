@@ -236,13 +236,12 @@ function endGame(won: boolean) {
   render()
 }
 
+function shouldDisableInput(): boolean {
+  return isStatsOpen || state.gameOver || revealingRowIndex !== null
+}
+
 function submitGuess() {
-  if (
-    draft.length !== WORD_LENGTH ||
-    state.gameOver ||
-    state.guesses.length >= MAX_GUESSES ||
-    revealingRowIndex !== null
-  ) {
+  if (draft.length !== WORD_LENGTH || shouldDisableInput() || state.guesses.length >= MAX_GUESSES) {
     return
   }
 
@@ -281,7 +280,7 @@ function submitGuess() {
 }
 
 function handleKey(input: string) {
-  if (isStatsOpen || state.gameOver || revealingRowIndex !== null) return
+  if (shouldDisableInput()) return
 
   if (input === 'ENTER') {
     submitGuess()
@@ -412,7 +411,7 @@ function render() {
 
   app.querySelectorAll<HTMLButtonElement>('button[data-key]').forEach((button) => {
     button.addEventListener('click', () => handleKey(button.dataset.key ?? ''))
-    button.disabled = isStatsOpen || state.gameOver || revealingRowIndex !== null
+    button.disabled = shouldDisableInput()
   })
 
   app.querySelectorAll<HTMLButtonElement>('button[data-action="open-stats"]').forEach((button) => {
