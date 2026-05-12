@@ -41,6 +41,7 @@ let statusMessage = ''
 let revealingRowIndex: number | null = null
 let revealTimeout: ReturnType<typeof setTimeout> | null = null
 let revealToken = 0
+let isStatsOpen = false
 
 let validWords: Set<string> | null = null
 
@@ -197,6 +198,25 @@ function recordDailyScore() {
   state.scoreRecorded = true
 }
 
+function getScoreStatistics(scores: ScoreEntry[]) {
+  const played = scores.length
+  const wins = scores.filter((score) => score.won).length
+  const losses = played - wins
+  const winRate = played > 0 ? Math.round((wins / played) * 100) : 0
+  const winningGuesses = scores
+    .filter((score): score is ScoreEntry & { guesses: number } => score.won && typeof score.guesses === 'number')
+    .map((score) => score.guesses)
+  const averageWinGuesses = winningGuesses.length
+    ? (winningGuesses.reduce((sum, guesses) => sum + guesses, 0) / winningGuesses.length).toFixed(2)
+    : '—'
+  const bestWinGuesses = winningGuesses.length ? Math.min(...winningGuesses) : null
+  const distribution = Array.from({ length: MAX_GUESSES }, (_, index) =>
+    scores.filter((score) => score.won && score.guesses === index + 1).length,
+  )
+
+  return { played, wins, losses, winRate, averageWinGuesses, bestWinGuesses, distribution }
+}
+
 function endGame(won: boolean) {
   state.won = won
   state.gameOver = true
@@ -250,7 +270,7 @@ function submitGuess() {
 }
 
 function handleKey(input: string) {
-  if (state.gameOver || revealingRowIndex !== null) return
+  if (isStatsOpen || state.gameOver || revealingRowIndex !== null) return
 
   if (input === 'ENTER') {
     submitGuess()
@@ -285,6 +305,7 @@ function resetForNewDay(nextDay: string) {
 }
 
 function render() {
+  const stats = getScoreStatistics(state.scores)
   const keyboardStatuses = getKeyboardStatuses()
   const scoreItems = [...state.scores]
     .reverse()
@@ -297,6 +318,7 @@ function render() {
   app.innerHTML = `
     <header class="top-bar">
       <h1>PAARDLE</h1>
+      <button type="button" class="stats-button" data-action="open-stats" aria-haspopup="dialog" aria-expanded="${isStatsOpen}">Statistieken</button>
     </header>
     <main class="game-shell">
       <section class="board" aria-label="Word grid">
@@ -347,22 +369,64 @@ function render() {
             .join('')}</div>`
         }).join('')}
       </section>
-
-      <section class="history" aria-label="Score history">
-        <h2>Eerdere scores</h2>
-        ${state.scores.length > 0 ? `<ul>${scoreItems}</ul>` : '<p class="history-empty">Nog geen afgeronde potjes.</p>'}
-      </section>
     </main>
+    ${
+      isStatsOpen
+        ? `
+      <button type="button" class="stats-overlay" data-action="close-stats" aria-label="Sluit statistieken"></button>
+      <section class="stats-modal" role="dialog" aria-modal="true" aria-label="Statistieken">
+        <div class="stats-modal-header">
+          <h2>Statistieken</h2>
+          <button type="button" class="stats-close" data-action="close-stats" aria-label="Sluiten">✕</button>
+        </div>
+        <div class="stats-grid">
+          <article><strong>${stats.played}</strong><span>Gespeeld</span></article>
+          <article><strong>${stats.winRate}%</strong><span>Winrate</span></article>
+          <article><strong>${stats.wins}</strong><span>Gewonnen</span></article>
+          <article><strong>${stats.losses}</strong><span>Verloren</span></article>
+          <article><strong>${stats.averageWinGuesses}</strong><span>Gem. guesses (winst)</span></article>
+          <article><strong>${stats.bestWinGuesses ?? '—'}</strong><span>Beste score</span></article>
+        </div>
+        <h3>Verdeling</h3>
+        <ul class="distribution">
+          ${stats.distribution.map((count, index) => `<li><span>${index + 1}</span><span>${count}</span></li>`).join('')}
+        </ul>
+        <h3>Eerdere scores</h3>
+        ${state.scores.length > 0 ? `<ul class="history-list">${scoreItems}</ul>` : '<p class="history-empty">Nog geen afgeronde potjes.</p>'}
+      </section>
+    `
+        : ''
+    }
   `
 
   app.querySelectorAll<HTMLButtonElement>('button[data-key]').forEach((button) => {
     button.addEventListener('click', () => handleKey(button.dataset.key ?? ''))
-    button.disabled = state.gameOver || revealingRowIndex !== null
+    button.disabled = isStatsOpen || state.gameOver || revealingRowIndex !== null
+  })
+
+  app.querySelectorAll<HTMLButtonElement>('button[data-action="open-stats"]').forEach((button) => {
+    button.addEventListener('click', () => {
+      isStatsOpen = true
+      render()
+    })
+  })
+
+  app.querySelectorAll<HTMLElement>('[data-action="close-stats"]').forEach((element) => {
+    element.addEventListener('click', () => {
+      isStatsOpen = false
+      render()
+    })
   })
 }
 
 window.addEventListener('keydown', (event) => {
   const key = event.key.toUpperCase()
+  if (key === 'ESCAPE' && isStatsOpen) {
+    event.preventDefault()
+    isStatsOpen = false
+    render()
+    return
+  }
   if (key === 'ENTER' || key === 'BACKSPACE' || /^[A-Z]$/.test(key)) {
     event.preventDefault()
     handleKey(key)

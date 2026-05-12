@@ -23,16 +23,26 @@ body {
 .top-bar {
   border-bottom: 1px solid #d3d6da;
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
   min-height: 64px;
+  padding: 0 12px;
 }
 
 .top-bar h1 {
-  margin: 0;
+  margin: 0 auto 0 0;
   font-size: 2.1rem;
   font-weight: 700;
   letter-spacing: 0.03em;
+}
+
+.stats-button {
+  border: 1px solid #d3d6da;
+  background: #fff;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .game-shell {
@@ -171,18 +181,78 @@ body {
   cursor: default;
 }
 
-.history {
-  margin-top: 18px;
-  border-top: 1px solid #d3d6da;
-  padding-top: 12px;
+.stats-overlay {
+  position: fixed;
+  inset: 0;
+  border: 0;
+  background: rgb(0 0 0 / 45%);
+  z-index: 9;
 }
 
-.history h2 {
-  margin: 0 0 8px;
+.stats-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(520px, calc(100% - 24px));
+  max-height: calc(100vh - 36px);
+  overflow: auto;
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px;
+  z-index: 10;
+}
+
+.stats-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.stats-modal-header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.stats-close {
+  border: 0;
+  background: transparent;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.stats-grid article {
+  border: 1px solid #d3d6da;
+  border-radius: 8px;
+  padding: 8px 6px;
+  text-align: center;
+}
+
+.stats-grid strong {
+  display: block;
+  font-size: 1.2rem;
+}
+
+.stats-grid span {
+  font-size: 0.75rem;
+  color: #565758;
+}
+
+.stats-modal h3 {
+  margin: 10px 0 8px;
   font-size: 0.95rem;
 }
 
-.history ul {
+.distribution,
+.history-list {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -190,7 +260,8 @@ body {
   gap: 6px;
 }
 
-.history li {
+.distribution li,
+.history-list li {
   display: flex;
   justify-content: space-between;
   font-size: 0.9rem;
