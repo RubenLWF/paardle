@@ -305,7 +305,7 @@ function resetForNewDay(nextDay: string) {
 }
 
 function render() {
-  const stats = getScoreStatistics(state.scores)
+  const stats = isStatsOpen ? getScoreStatistics(state.scores) : null
   const keyboardStatuses = getKeyboardStatuses()
   const scoreItems = [...state.scores]
     .reverse()
@@ -371,7 +371,7 @@ function render() {
       </section>
     </main>
     ${
-      isStatsOpen
+      stats
         ? `
       <button type="button" class="stats-overlay" data-action="close-stats" aria-label="Sluit statistieken"></button>
       <section class="stats-modal" role="dialog" aria-modal="true" aria-label="Statistieken">
