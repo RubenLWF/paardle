@@ -1,0 +1,7 @@
+services:
+  paardle:
+    build:
+      context: .
+      dockerfile: DOCKERFILE
+    ports:
+      - '5173:5173'
