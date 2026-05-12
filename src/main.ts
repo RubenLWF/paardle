@@ -1,0 +1,333 @@
+import './style.css'
+
+const MAX_GUESSES = 6
+const WORD_LENGTH = 5
+const ANSWER = 'PAARD'
+const STORAGE_KEY = 'paardle-state-v1'
+const KEYBOARD_ROWS = ['QWERTYUIOP', 'ASDFGHJKL', 'ENTERZXCVBNMBACKSPACE']
+
+type LetterState = 'correct' | 'present' | 'absent'
+
+interface ScoreEntry {
+  date: string
+  won: boolean
+  guesses: number | null
+}
+
+interface GameState {
+  dayKey: string
+  guesses: string[]
+  won: boolean
+  gameOver: boolean
+  scoreRecorded: boolean
+  scores: ScoreEntry[]
+}
+
+const appElement = document.querySelector<HTMLDivElement>('#app')
+
+if (!appElement) {
+  throw new Error('App root not found')
+}
+
+const app = appElement
+
+let state = loadState()
+let draft = ''
+
+function getAmsterdamDayKey(date = new Date()): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Amsterdam',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date)
+}
+
+function getAmsterdamTimeParts(date = new Date()): { hour: number; minute: number; second: number } {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/Amsterdam',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).formatToParts(date)
+  const asNumber = (type: string): number =>
+    Number(parts.find((part) => part.type === type)?.value ?? '0')
+
+  return { hour: asNumber('hour'), minute: asNumber('minute'), second: asNumber('second') }
+}
+
+function formatTimeUntilReset(): string {
+  const { hour, minute, second } = getAmsterdamTimeParts()
+  const totalSeconds = 24 * 60 * 60 - (hour * 60 * 60 + minute * 60 + second)
+  const hours = Math.floor(totalSeconds / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
+}
+
+function loadState(): GameState {
+  const today = getAmsterdamDayKey()
+  const initial: GameState = {
+    dayKey: today,
+    guesses: [],
+    won: false,
+    gameOver: false,
+    scoreRecorded: false,
+    scores: [],
+  }
+
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY)
+    if (!raw) return initial
+    const parsed = JSON.parse(raw) as Partial<GameState>
+    const nextState: GameState = {
+      dayKey: typeof parsed.dayKey === 'string' ? parsed.dayKey : today,
+      guesses: Array.isArray(parsed.guesses)
+        ? parsed.guesses.filter((guess): guess is string => typeof guess === 'string').slice(0, MAX_GUESSES)
+        : [],
+      won: Boolean(parsed.won),
+      gameOver: Boolean(parsed.gameOver),
+      scoreRecorded: Boolean(parsed.scoreRecorded),
+      scores: Array.isArray(parsed.scores)
+        ? parsed.scores.filter(
+            (score): score is ScoreEntry =>
+              typeof score?.date === 'string' &&
+              typeof score?.won === 'boolean' &&
+              (typeof score?.guesses === 'number' || score?.guesses === null),
+          )
+        : [],
+    }
+
+    if (nextState.dayKey !== today) {
+      nextState.dayKey = today
+      nextState.guesses = []
+      nextState.won = false
+      nextState.gameOver = false
+      nextState.scoreRecorded = false
+    }
+
+    return nextState
+  } catch {
+    return initial
+  }
+}
+
+function saveState() {
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+  } catch {
+    // no-op when storage is unavailable
+  }
+}
+
+function evaluateGuess(guess: string): LetterState[] {
+  const answerLetters = ANSWER.split('')
+  const result: LetterState[] = Array<LetterState>(WORD_LENGTH).fill('absent')
+
+  for (let index = 0; index < WORD_LENGTH; index += 1) {
+    if (guess[index] === answerLetters[index]) {
+      result[index] = 'correct'
+      answerLetters[index] = ''
+    }
+  }
+
+  for (let index = 0; index < WORD_LENGTH; index += 1) {
+    if (result[index] !== 'absent') continue
+    const answerIndex = answerLetters.indexOf(guess[index])
+    if (answerIndex >= 0) {
+      result[index] = 'present'
+      answerLetters[answerIndex] = ''
+    }
+  }
+
+  return result
+}
+
+function setKeyboardStatus(current: Record<string, LetterState>, letter: string, next: LetterState) {
+  const priority: Record<LetterState, number> = { absent: 0, present: 1, correct: 2 }
+  if (!current[letter] || priority[next] > priority[current[letter]]) {
+    current[letter] = next
+  }
+}
+
+function getKeyboardStatuses(): Record<string, LetterState> {
+  const statuses: Record<string, LetterState> = {}
+  for (const guess of state.guesses) {
+    const evaluation = evaluateGuess(guess)
+    for (let i = 0; i < guess.length; i += 1) {
+      setKeyboardStatus(statuses, guess[i], evaluation[i])
+    }
+  }
+  return statuses
+}
+
+function recordDailyScore() {
+  if (state.scoreRecorded) return
+  if (state.scores.some((score) => score.date === state.dayKey)) {
+    state.scoreRecorded = true
+    return
+  }
+  state.scores.push({
+    date: state.dayKey,
+    won: state.won,
+    guesses: state.won ? state.guesses.length : null,
+  })
+  state.scoreRecorded = true
+}
+
+function endGame(won: boolean) {
+  state.won = won
+  state.gameOver = true
+  recordDailyScore()
+  saveState()
+}
+
+function submitGuess() {
+  if (draft.length !== WORD_LENGTH || state.gameOver || state.guesses.length >= MAX_GUESSES) {
+    return
+  }
+
+  const guess = draft
+  draft = ''
+  state.guesses.push(guess)
+
+  if (guess === ANSWER) {
+    endGame(true)
+    return
+  }
+
+  if (state.guesses.length >= MAX_GUESSES) {
+    endGame(false)
+    return
+  }
+
+  saveState()
+}
+
+function handleKey(input: string) {
+  if (state.gameOver) return
+
+  if (input === 'ENTER') {
+    submitGuess()
+  } else if (input === 'BACKSPACE') {
+    draft = draft.slice(0, -1)
+  } else if (/^[A-Z]$/.test(input) && draft.length < WORD_LENGTH) {
+    draft += input
+  }
+
+  render()
+}
+
+function resetForNewDay(nextDay: string) {
+  state.dayKey = nextDay
+  state.guesses = []
+  state.won = false
+  state.gameOver = false
+  state.scoreRecorded = false
+  draft = ''
+  saveState()
+  render()
+}
+
+function render() {
+  const keyboardStatuses = getKeyboardStatuses()
+  const scoreItems = [...state.scores]
+    .reverse()
+    .map(
+      (score) =>
+        `<li><span>${score.date}</span><span>${score.won ? `${score.guesses}/6` : 'X/6'}</span></li>`,
+    )
+    .join('')
+
+  app.innerHTML = `
+    <header class="top-bar">
+      <h1>PAARDLE</h1>
+    </header>
+    <main class="game-shell">
+      <section class="board" aria-label="Word grid">
+        ${Array.from({ length: MAX_GUESSES }, (_, row) => {
+          const submittedGuess = state.guesses[row]
+          const rowGuess =
+            submittedGuess ?? (row === state.guesses.length && !state.gameOver ? draft.padEnd(WORD_LENGTH, ' ') : ' '.repeat(WORD_LENGTH))
+          const states = submittedGuess ? evaluateGuess(submittedGuess) : Array<LetterState>(WORD_LENGTH).fill('absent')
+          return `
+            <div class="row">
+              ${Array.from({ length: WORD_LENGTH }, (_, col) => {
+                const letter = rowGuess[col] === ' ' ? '&nbsp;' : rowGuess[col]
+                const tileClass = submittedGuess ? `tile state-${states[col]}` : `tile${rowGuess[col] === ' ' ? '' : ' filled'}`
+                return `<div class="${tileClass}">${letter}</div>`
+              }).join('')}
+            </div>
+          `
+        }).join('')}
+      </section>
+
+      <p class="status">
+        ${
+          state.gameOver
+            ? state.won
+              ? `Gewonnen in ${state.guesses.length}/6. Nieuwe ronde over ${formatTimeUntilReset()} (Amsterdam).`
+              : `Niet geraden. Het woord was ${ANSWER}. Nieuwe ronde over ${formatTimeUntilReset()} (Amsterdam).`
+            : 'Raad het woord in 6 pogingen.'
+        }
+      </p>
+
+      <section class="keyboard" aria-label="Keyboard">
+        ${KEYBOARD_ROWS.map((row) => {
+          const keys =
+            row === 'ENTERZXCVBNMBACKSPACE'
+              ? ['ENTER', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', 'BACKSPACE']
+              : row.split('')
+          return `<div class="key-row">${keys
+            .map((key) => {
+              const label = key === 'BACKSPACE' ? '⌫' : key
+              const stateClass = keyboardStatuses[key] ? ` state-${keyboardStatuses[key]}` : ''
+              const bigClass = key === 'ENTER' || key === 'BACKSPACE' ? ' key-big' : ''
+              return `<button type="button" class="key${stateClass}${bigClass}" data-key="${key}" aria-label="${key}">${label}</button>`
+            })
+            .join('')}</div>`
+        }).join('')}
+      </section>
+
+      <section class="history" aria-label="Score history">
+        <h2>Eerdere scores</h2>
+        ${
+          scoreItems
+            ? `<ul>${scoreItems}</ul>`
+            : '<p class="history-empty">Nog geen afgeronde potjes.</p>'
+        }
+      </section>
+    </main>
+  `
+
+  app.querySelectorAll<HTMLButtonElement>('button[data-key]').forEach((button) => {
+    button.addEventListener('click', () => handleKey(button.dataset.key ?? ''))
+    button.disabled = state.gameOver
+  })
+}
+
+window.addEventListener('keydown', (event) => {
+  const key = event.key.toUpperCase()
+  if (key === 'ENTER' || key === 'BACKSPACE' || /^[A-Z]$/.test(key)) {
+    event.preventDefault()
+    handleKey(key)
+  }
+})
+
+setInterval(() => {
+  const currentDay = getAmsterdamDayKey()
+  if (currentDay !== state.dayKey) {
+    resetForNewDay(currentDay)
+    return
+  }
+  if (state.gameOver) {
+    render()
+  }
+}, 30_000)
+
+if (state.gameOver) {
+  recordDailyScore()
+  saveState()
+}
+
+render()

@@ -1,0 +1,174 @@
+:root {
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  line-height: 1.2;
+  font-weight: 400;
+  color: #1a1a1b;
+  background-color: #ffffff;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+#app {
+  min-height: 100vh;
+}
+
+.top-bar {
+  border-bottom: 1px solid #d3d6da;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 64px;
+}
+
+.top-bar h1 {
+  margin: 0;
+  font-size: 2.1rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.game-shell {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 12px 12px 24px;
+}
+
+.board {
+  display: grid;
+  gap: 5px;
+  margin: 10px auto 16px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 5px;
+}
+
+.tile {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border: 2px solid #d3d6da;
+  text-transform: uppercase;
+  font-size: clamp(1.1rem, 2.2vw, 2rem);
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  user-select: none;
+}
+
+.tile.filled {
+  border-color: #878a8c;
+}
+
+.tile.state-correct {
+  background: #6aaa64;
+  border-color: #6aaa64;
+  color: #fff;
+}
+
+.tile.state-present {
+  background: #c9b458;
+  border-color: #c9b458;
+  color: #fff;
+}
+
+.tile.state-absent {
+  background: #787c7e;
+  border-color: #787c7e;
+  color: #fff;
+}
+
+.status {
+  min-height: 2.2rem;
+  text-align: center;
+  margin: 0 0 12px;
+  font-size: 0.95rem;
+}
+
+.keyboard {
+  display: grid;
+  gap: 8px;
+}
+
+.key-row {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+
+.key {
+  border: 0;
+  border-radius: 4px;
+  height: 58px;
+  min-width: 30px;
+  padding: 0 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  background: #d3d6da;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.key.key-big {
+  min-width: 60px;
+  font-size: 0.72rem;
+}
+
+.key.state-correct {
+  background: #6aaa64;
+  color: #fff;
+}
+
+.key.state-present {
+  background: #c9b458;
+  color: #fff;
+}
+
+.key.state-absent {
+  background: #787c7e;
+  color: #fff;
+}
+
+.key:disabled {
+  cursor: default;
+}
+
+.history {
+  margin-top: 18px;
+  border-top: 1px solid #d3d6da;
+  padding-top: 12px;
+}
+
+.history h2 {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+}
+
+.history ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.history li {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+}
+
+.history-empty {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #565758;
+}
