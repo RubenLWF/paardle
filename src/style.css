@@ -87,6 +87,35 @@ body {
   color: #fff;
 }
 
+.tile.reveal {
+  animation: tile-reveal 600ms ease both;
+  animation-delay: var(--reveal-delay, 0ms);
+}
+
+@keyframes tile-reveal {
+  0% {
+    transform: rotateX(0deg);
+    background: #fff;
+    border-color: #878a8c;
+    color: #1a1a1b;
+  }
+
+  45% {
+    transform: rotateX(90deg);
+    background: #fff;
+    border-color: #878a8c;
+    color: #1a1a1b;
+  }
+
+  55% {
+    transform: rotateX(-90deg);
+  }
+
+  100% {
+    transform: rotateX(0deg);
+  }
+}
+
 .status {
   min-height: 2.2rem;
   text-align: center;

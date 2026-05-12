@@ -1,10 +1,14 @@
 import './style.css'
+import englishWordsRaw from './wordlists/english-5.txt?raw'
+import dutchWordsRaw from './wordlists/dutch-5.txt?raw'
 
 const MAX_GUESSES = 6
 const WORD_LENGTH = 5
 const ANSWER = 'PAARD'
 const STORAGE_KEY = 'paardle-state-v1'
 const KEYBOARD_ROWS = ['QWERTYUIOP', 'ASDFGHJKL', 'ENTERZXCVBNMBACKSPACE']
+const REVEAL_STEP_MS = 300
+const INVALID_WORD_MESSAGE = 'Alleen echte Nederlandse of Engelse woorden van 5 letters.'
 
 type LetterState = 'correct' | 'present' | 'absent'
 
@@ -33,6 +37,17 @@ const app = appElement
 
 let state = loadState()
 let draft = ''
+let statusMessage = ''
+let revealingRowIndex: number | null = null
+let revealTimeout: ReturnType<typeof setTimeout> | null = null
+
+const VALID_WORDS = new Set(
+  [...englishWordsRaw.split('\n'), ...dutchWordsRaw.split('\n')]
+    .map((word) => word.trim().toUpperCase())
+    .filter((word) => /^[A-Z]{5}$/.test(word)),
+)
+
+VALID_WORDS.add(ANSWER)
 
 function getAmsterdamDayKey(date = new Date()): string {
   return new Intl.DateTimeFormat('en-CA', {
@@ -152,7 +167,8 @@ function setKeyboardStatus(current: Record<string, LetterState>, letter: string,
 
 function getKeyboardStatuses(): Record<string, LetterState> {
   const statuses: Record<string, LetterState> = {}
-  for (const guess of state.guesses) {
+  for (const [rowIndex, guess] of state.guesses.entries()) {
+    if (rowIndex === revealingRowIndex) continue
     const evaluation = evaluateGuess(guess)
     for (let i = 0; i < guess.length; i += 1) {
       setKeyboardStatus(statuses, guess[i], evaluation[i])
@@ -180,38 +196,61 @@ function endGame(won: boolean) {
   state.gameOver = true
   recordDailyScore()
   saveState()
+  render()
 }
 
 function submitGuess() {
-  if (draft.length !== WORD_LENGTH || state.gameOver || state.guesses.length >= MAX_GUESSES) {
+  if (
+    draft.length !== WORD_LENGTH ||
+    state.gameOver ||
+    state.guesses.length >= MAX_GUESSES ||
+    revealingRowIndex !== null
+  ) {
     return
   }
 
   const guess = draft
+  if (!VALID_WORDS.has(guess)) {
+    statusMessage = INVALID_WORD_MESSAGE
+    return
+  }
+
+  statusMessage = ''
   draft = ''
   state.guesses.push(guess)
-
-  if (guess === ANSWER) {
-    endGame(true)
-    return
-  }
-
-  if (state.guesses.length >= MAX_GUESSES) {
-    endGame(false)
-    return
-  }
-
+  revealingRowIndex = state.guesses.length - 1
   saveState()
+
+  if (revealTimeout) clearTimeout(revealTimeout)
+  revealTimeout = setTimeout(() => {
+    revealingRowIndex = null
+    revealTimeout = null
+
+    if (guess === ANSWER) {
+      endGame(true)
+      return
+    }
+
+    if (state.guesses.length >= MAX_GUESSES) {
+      endGame(false)
+      return
+    }
+
+    saveState()
+    render()
+  }, REVEAL_STEP_MS * WORD_LENGTH)
 }
 
 function handleKey(input: string) {
-  if (state.gameOver) return
+  if (state.gameOver || revealingRowIndex !== null) return
 
   if (input === 'ENTER') {
     submitGuess()
   } else if (input === 'BACKSPACE') {
+    statusMessage = ''
     draft = draft.slice(0, -1)
   } else if (/^[A-Z]$/.test(input) && draft.length < WORD_LENGTH) {
+    statusMessage = ''
     draft += input
   }
 
@@ -219,6 +258,13 @@ function handleKey(input: string) {
 }
 
 function resetForNewDay(nextDay: string) {
+  if (revealTimeout) {
+    clearTimeout(revealTimeout)
+    revealTimeout = null
+  }
+
+  revealingRowIndex = null
+  statusMessage = ''
   state.dayKey = nextDay
   state.guesses = []
   state.won = false
@@ -254,8 +300,12 @@ function render() {
             <div class="row">
               ${Array.from({ length: WORD_LENGTH }, (_, col) => {
                 const letter = rowGuess[col] === ' ' ? '&nbsp;' : rowGuess[col]
-                const tileClass = submittedGuess ? `tile state-${states[col]}` : `tile${rowGuess[col] === ' ' ? '' : ' filled'}`
-                return `<div class="${tileClass}">${letter}</div>`
+                const isRevealing = Boolean(submittedGuess) && row === revealingRowIndex
+                const tileClass = submittedGuess
+                  ? `tile state-${states[col]}${isRevealing ? ' reveal' : ''}`
+                  : `tile${rowGuess[col] === ' ' ? '' : ' filled'}`
+                const tileStyle = isRevealing ? ` style="--reveal-delay:${col * REVEAL_STEP_MS}ms"` : ''
+                return `<div class="${tileClass}"${tileStyle}>${letter}</div>`
               }).join('')}
             </div>
           `
@@ -268,7 +318,7 @@ function render() {
             ? state.won
               ? `Gewonnen in ${state.guesses.length}/6. Nieuwe ronde over ${formatTimeUntilReset()} (Amsterdam).`
               : `Niet geraden. Het woord was ${ANSWER}. Nieuwe ronde over ${formatTimeUntilReset()} (Amsterdam).`
-            : 'Raad het woord in 6 pogingen.'
+            : statusMessage || 'Raad het woord in 6 pogingen.'
         }
       </p>
 
@@ -298,7 +348,7 @@ function render() {
 
   app.querySelectorAll<HTMLButtonElement>('button[data-key]').forEach((button) => {
     button.addEventListener('click', () => handleKey(button.dataset.key ?? ''))
-    button.disabled = state.gameOver
+    button.disabled = state.gameOver || revealingRowIndex !== null
   })
 }
 
