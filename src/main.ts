@@ -291,11 +291,7 @@ function render() {
 
       <section class="history" aria-label="Score history">
         <h2>Eerdere scores</h2>
-        ${
-          scoreItems
-            ? `<ul>${scoreItems}</ul>`
-            : '<p class="history-empty">Nog geen afgeronde potjes.</p>'
-        }
+        ${state.scores.length > 0 ? `<ul>${scoreItems}</ul>` : '<p class="history-empty">Nog geen afgeronde potjes.</p>'}
       </section>
     </main>
   `
