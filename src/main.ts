@@ -8,7 +8,7 @@ const ANSWER = 'PAARD'
 const STORAGE_KEY = 'paardle-state-v1'
 const KEYBOARD_ROWS = ['QWERTYUIOP', 'ASDFGHJKL', 'ENTERZXCVBNMBACKSPACE']
 const REVEAL_STEP_MS = 300
-const INVALID_WORD_MESSAGE = 'Alleen echte Nederlandse of Engelse woorden van 5 letters.'
+const INVALID_WORD_MESSAGE = 'Only real 5-letter Dutch or English words.'
 
 type LetterState = 'correct' | 'present' | 'absent'
 
@@ -331,7 +331,7 @@ function render() {
   app.innerHTML = `
     <header class="top-bar">
       <h1>PAARDLE</h1>
-      <button type="button" class="stats-button" data-action="open-stats" aria-haspopup="dialog" aria-expanded="${isStatsOpen ? 'true' : 'false'}">Statistieken</button>
+      <button type="button" class="stats-button" data-action="open-stats" aria-haspopup="dialog" aria-expanded="${isStatsOpen ? 'true' : 'false'}">Statistics</button>
     </header>
     <main class="game-shell">
       <section class="board" aria-label="Word grid">
@@ -360,14 +360,14 @@ function render() {
         ${
           state.gameOver
             ? state.won
-              ? `Gewonnen in ${state.guesses.length}/6. Nieuwe ronde over ${formatTimeUntilReset()} (Amsterdam).`
-              : `Niet geraden. Het woord was ${ANSWER}. Nieuwe ronde over ${formatTimeUntilReset()} (Amsterdam).`
-            : statusMessage || 'Raad het woord in 6 pogingen.'
+              ? `Won in ${state.guesses.length}/6. New round in ${formatTimeUntilReset()} (Amsterdam).`
+              : `Not guessed. The word was ${ANSWER}. New round in ${formatTimeUntilReset()} (Amsterdam).`
+            : statusMessage || 'Guess the word in 6 tries.'
         }
       </p>
 
       <section class="native-input-shell">
-        <label class="native-input-label" for="native-input">Gebruik je telefoontoetsenbord</label>
+        <label class="native-input-label" for="native-input">Use your phone keyboard</label>
         <input
           id="native-input"
           class="native-input"
@@ -380,7 +380,7 @@ function render() {
           spellcheck="false"
           enterkeyhint="done"
           maxlength="${WORD_LENGTH}"
-          aria-label="Typ je gok"
+          aria-label="Type your guess"
           value="${draft}"
         />
       </section>
@@ -405,26 +405,26 @@ function render() {
     ${
       stats
         ? `
-      <button type="button" class="stats-overlay" data-action="close-stats" aria-label="Sluit statistieken"></button>
-      <section class="stats-modal" role="dialog" aria-modal="true" aria-label="Statistieken">
+      <button type="button" class="stats-overlay" data-action="close-stats" aria-label="Close statistics"></button>
+      <section class="stats-modal" role="dialog" aria-modal="true" aria-label="Statistics">
         <div class="stats-modal-header">
-          <h2>Statistieken</h2>
-          <button type="button" class="stats-close" data-action="close-stats" aria-label="Sluiten">✕</button>
+          <h2>Statistics</h2>
+          <button type="button" class="stats-close" data-action="close-stats" aria-label="Close">✕</button>
         </div>
         <div class="stats-grid">
-          <article><strong>${stats.played}</strong><span>Gespeeld</span></article>
-          <article><strong>${stats.winRate}%</strong><span>Winrate</span></article>
-          <article><strong>${stats.wins}</strong><span>Gewonnen</span></article>
-          <article><strong>${stats.losses}</strong><span>Verloren</span></article>
-          <article><strong>${stats.averageWinGuesses}</strong><span>Gem. guesses (winst)</span></article>
-          <article><strong>${stats.bestWinGuesses ?? '—'}</strong><span>Beste score</span></article>
+          <article><strong>${stats.played}</strong><span>Played</span></article>
+          <article><strong>${stats.winRate}%</strong><span>Win rate</span></article>
+          <article><strong>${stats.wins}</strong><span>Won</span></article>
+          <article><strong>${stats.losses}</strong><span>Lost</span></article>
+          <article><strong>${stats.averageWinGuesses}</strong><span>Avg. guesses (wins)</span></article>
+          <article><strong>${stats.bestWinGuesses ?? '—'}</strong><span>Best score</span></article>
         </div>
-        <h3>Verdeling</h3>
+        <h3>Distribution</h3>
         <ul class="distribution">
           ${stats.distribution.map((count, index) => `<li><span>${index + 1}</span><span>${count}</span></li>`).join('')}
         </ul>
-        <h3>Eerdere scores</h3>
-        ${state.scores.length > 0 ? `<ul class="history-list">${scoreItems}</ul>` : '<p class="history-empty">Nog geen afgeronde potjes.</p>'}
+        <h3>Previous scores</h3>
+        ${state.scores.length > 0 ? `<ul class="history-list">${scoreItems}</ul>` : '<p class="history-empty">No completed games yet.</p>'}
       </section>
     `
         : ''
