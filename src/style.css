@@ -272,6 +272,32 @@ body {
   font-size: 0.9rem;
 }
 
+.distribution li {
+  align-items: center;
+  gap: 8px;
+}
+
+.distribution-label,
+.distribution-count {
+  width: 1.25rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.distribution-track {
+  flex: 1;
+  height: 1rem;
+  border-radius: 0.5rem;
+  background: #e3e4e6;
+  overflow: hidden;
+}
+
+.distribution-fill {
+  display: block;
+  height: 100%;
+  background: #6aaa64;
+}
+
 .history-empty {
   margin: 0;
   font-size: 0.9rem;

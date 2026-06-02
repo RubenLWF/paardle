@@ -319,6 +319,7 @@ function render() {
   const shouldRestoreNativeInputFocus =
     document.activeElement instanceof HTMLInputElement && document.activeElement.dataset.nativeInput === 'true'
   const stats = isStatsOpen ? (statsSnapshot ?? getScoreStatistics(state.scores)) : null
+  const maxDistributionCount = stats ? Math.max(1, ...stats.distribution) : 1
   const keyboardStatuses = getKeyboardStatuses()
   const scoreItems = [...state.scores]
     .reverse()
@@ -421,7 +422,16 @@ function render() {
         </div>
         <h3>Distribution</h3>
         <ul class="distribution">
-          ${stats.distribution.map((count, index) => `<li><span>${index + 1}</span><span>${count}</span></li>`).join('')}
+          ${stats.distribution
+            .map(
+              (count, index) => `
+            <li>
+              <span class="distribution-label">${index + 1}</span>
+              <span class="distribution-track" role="img" aria-label="${index + 1} pogingen: ${count} keer"><span class="distribution-fill" style="width:${Math.round((count / maxDistributionCount) * 100)}%"></span></span>
+              <span class="distribution-count">${count}</span>
+            </li>`,
+            )
+            .join('')}
         </ul>
         <h3>Previous scores</h3>
         ${state.scores.length > 0 ? `<ul class="history-list">${scoreItems}</ul>` : '<p class="history-empty">No completed games yet.</p>'}
