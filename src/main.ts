@@ -427,7 +427,7 @@ function render() {
               (count, index) => `
             <li>
               <span class="distribution-label">${index + 1}</span>
-              <span class="distribution-track"><span class="distribution-fill" style="width:${Math.round((count / maxDistributionCount) * 100)}%"></span></span>
+              <span class="distribution-track" role="img" aria-label="${index + 1} guesses: ${count} keer"><span class="distribution-fill" style="width:${Math.round((count / maxDistributionCount) * 100)}%"></span></span>
               <span class="distribution-count">${count}</span>
             </li>`,
             )
