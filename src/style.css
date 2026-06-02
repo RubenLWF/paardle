@@ -134,6 +134,10 @@ body {
   font-size: 0.95rem;
 }
 
+.native-input-shell {
+  display: none;
+}
+
 .keyboard {
   display: grid;
   gap: 8px;
@@ -272,4 +276,33 @@ body {
   margin: 0;
   font-size: 0.9rem;
   color: #565758;
+}
+
+@media (max-width: 640px) {
+  .native-input-shell {
+    display: grid;
+    gap: 6px;
+    margin: 0 0 12px;
+  }
+
+  .native-input-label {
+    text-align: center;
+    font-size: 0.85rem;
+    color: #565758;
+  }
+
+  .native-input {
+    width: 100%;
+    border: 1px solid #d3d6da;
+    border-radius: 6px;
+    min-height: 44px;
+    padding: 0 12px;
+    font-size: 1rem;
+    text-transform: uppercase;
+    text-align: center;
+  }
+
+  .keyboard {
+    display: none;
+  }
 }

@@ -316,6 +316,8 @@ function resetForNewDay(nextDay: string) {
 }
 
 function render() {
+  const shouldRestoreNativeInputFocus =
+    document.activeElement instanceof HTMLInputElement && document.activeElement.dataset.nativeInput === 'true'
   const stats = isStatsOpen ? (statsSnapshot ?? getScoreStatistics(state.scores)) : null
   const keyboardStatuses = getKeyboardStatuses()
   const scoreItems = [...state.scores]
@@ -363,6 +365,25 @@ function render() {
             : statusMessage || 'Raad het woord in 6 pogingen.'
         }
       </p>
+
+      <section class="native-input-shell">
+        <label class="native-input-label" for="native-input">Gebruik je telefoontoetsenbord</label>
+        <input
+          id="native-input"
+          class="native-input"
+          data-native-input="true"
+          type="text"
+          inputmode="text"
+          autocomplete="off"
+          autocapitalize="characters"
+          autocorrect="off"
+          spellcheck="false"
+          enterkeyhint="done"
+          maxlength="${WORD_LENGTH}"
+          aria-label="Typ je gok"
+          value="${draft}"
+        />
+      </section>
 
       <section class="keyboard" aria-label="Keyboard">
         ${KEYBOARD_ROWS.map((row) => {
@@ -415,6 +436,33 @@ function render() {
     button.disabled = shouldDisableInput()
   })
 
+  const nativeInput = app.querySelector<HTMLInputElement>('input[data-native-input="true"]')
+  if (nativeInput) {
+    nativeInput.disabled = shouldDisableInput()
+    nativeInput.addEventListener('input', () => {
+      if (shouldDisableInput()) return
+      const nextDraft = nativeInput.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, WORD_LENGTH)
+      if (nextDraft === draft) {
+        nativeInput.value = draft
+        return
+      }
+      statusMessage = ''
+      draft = nextDraft
+      render()
+    })
+    nativeInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault()
+        handleKey('ENTER')
+      }
+    })
+  }
+
+  app.querySelector('.board')?.addEventListener('click', () => {
+    if (shouldDisableInput()) return
+    app.querySelector<HTMLInputElement>('input[data-native-input="true"]')?.focus()
+  })
+
   app.querySelectorAll<HTMLButtonElement>('button[data-action="open-stats"]').forEach((button) => {
     button.addEventListener('click', () => {
       statsSnapshot = getScoreStatistics(state.scores)
@@ -437,6 +485,8 @@ function render() {
   } else if (shouldRestoreStatsButtonFocus) {
     app.querySelector<HTMLButtonElement>('button[data-action="open-stats"]')?.focus()
     shouldRestoreStatsButtonFocus = false
+  } else if (shouldRestoreNativeInputFocus && !shouldDisableInput()) {
+    nativeInput?.focus()
   }
 }
 
