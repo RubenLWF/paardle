@@ -287,7 +287,7 @@ body {
 .distribution-track {
   flex: 1;
   height: 1rem;
-  border-radius: 999px;
+  border-radius: 0.5rem;
   background: #e3e4e6;
   overflow: hidden;
 }
